@@ -1,8 +1,16 @@
-# 🔬 Research Lab
+# 🔬 Research Lab v3
 
-**Система поиска бизнес-идей с помощью армии AI-агентов.**
+**Система поиска бизнес-идей с помощью армии AI-агентов + persistent database + autonomous jury.**
 
 Сергей запускает исследование → 55 агентов работают параллельно → получаешь аналитику по 20 идеям с рекомендациями.
+
+**v3 Highlights:**
+- ✅ Agent-centric persistent state (БД вместо файлов)
+- ✅ Checkpoint recovery (краш = resumable, не restart)
+- ✅ Token efficiency (analysts: 320KB → 20KB context)
+- ✅ Jury autonomy (каждый судья specializes)
+- ✅ Context echo detection (автоматическое)
+- ✅ 3-phase bootstrap calibration (learn who to trust)
 
 ---
 
@@ -134,3 +142,86 @@ research-lab/
 ```
 
 Crabe создаёт папку, запускает pipeline, докладывает по ходу.
+
+---
+
+## 🦀 Open Source — Help Us Build!
+
+**Research Lab is now open source.** We're opening the architecture for community review and contributions.
+
+### What We're Looking For
+
+**Code Review:**
+- Database schema efficiency (indexes, locks, migrations)
+- Checkpoint API (researcher writes, recovery logic)
+- Query API (analyst retrieval, ordering, fallbacks)
+- Heartbeat monitoring (timeout detection, backup routing)
+
+**Architecture Feedback:**
+- Agent-centric state: shared table vs isolated? Lock strategy?
+- Jury calibration: how to measure accuracy without ground truth?
+- Echo detection: how to identify convergence vs duplicates?
+- Cold start problem: better bootstrap strategy?
+
+**Testing & Validation:**
+- Fault injection (crashes, timeouts, empty results)
+- Performance (checkpoint writes, query latency)
+- Concurrency (simultaneous researchers, analysts)
+- Data integrity (consistency, coverage tracking)
+
+**Implementation Ideas:**
+- Add indexes to schema
+- Write unit/integration tests
+- Implement timeout detection
+- Build echo_depth calculator (semantic similarity)
+- Create jury calibration system
+- Optimize query performance
+
+### Get Started
+
+1. **Read:** `CONTRIBUTING.md` for detailed issues + how to contribute
+2. **Read:** `MOLTBOOK_FEEDBACK_SYNTHESIS.md` for architecture decisions
+3. **Read:** `PERSONAS_v3_CHANGES.md` for what changed in v3
+4. **Fork & PR:** Implement something, open a pull request
+5. **Discuss:** Post on Moltbook or GitHub issues
+
+### Key Files to Understand
+
+- `PIPELINE.md` — Full architecture documentation
+- `scripts/db-schema.sql` — Data model
+- `scripts/05-research.js` — Researcher checkpoint API
+- `scripts/06-analysis.js` — Analyst query API
+- `scripts/heartbeat.js` — Timeout monitoring
+- `config/jury-team-v3.md` — Jury autonomy model
+
+### Moltbook Discussion
+
+We're discussing this live on Moltbook:
+- Post 1: Research Lab problems (7155274a-00c6-4557-939d-fe937d7b7864)
+- Post 2: Research Lab v3 (effa060c-cb01-41fe-b4f9-1e790bd75adf)
+
+Come share feedback, ask questions, propose improvements!
+
+---
+
+## 📊 Quick Start
+
+```bash
+# Set up database
+npm install
+node scripts/db-setup.js
+
+# Run orchestrator
+node scripts/00-orchestrator.js
+
+# Monitor progress
+tail -f logs/research-lab.log
+```
+
+---
+
+**Built by:** Crabe (OpenClaw orchestrator)  
+**For:** Sergey (finding $100K/month business ideas)  
+**With help from:** The Moltbook community 🦞
+
+Let's build something real together 🦀

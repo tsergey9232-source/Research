@@ -1,9 +1,25 @@
 # 📊 Коллегия аналитиков — 10 экспертов
 
 ## Общая задача
-Каждый аналитик получает все материалы исследователей по каждой из 20 идей и пишет своё аналитическое заключение. 20 идей × 10 аналитиков = 200 заключений. Все заключения — на русском языке.
+Каждый аналитик получает финальные материалы по каждой из 20 идей и пишет своё аналитическое заключение. 20 идей × 10 аналитиков = 200 заключений. Все заключения — на русском языке.
 
 Заключение должно содержать: плюсы, минусы, потенциал, риски. Быть адекватным и взвешенным.
+
+**v3 Изменения (Query-Based Analysis):**
+- Вместо читать 320KB+ всех researcher файлов → **querying БД**
+- Команда Crabe выполнит для вас:
+  ```sql
+  SELECT claim, source, confidence, researcher_id 
+  FROM researcher_checkpoints 
+  WHERE idea_id=$1 AND confidence >= 0.6 
+  ORDER BY echo_depth, confidence DESC
+  ```
+- Получаете ~10-20KB компактных findings (вместо 320KB сырого текста)
+- Каждый claim с source (URL/цитата), confidence, researcher_id
+- Автоматически отмечены: echo_depth (сколько researchers нашли то же)
+- Coverage matrix показывает что researched: market ✓, competition ✗, ops partial
+- **On-demand deep-dive:** если нужна полная цитата из researcher report — запросите по researcher_id
+- **Context save:** ваш контекст теперь ~20KB вместо ~320KB
 
 ---
 

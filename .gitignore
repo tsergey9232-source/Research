@@ -1,3 +1,25 @@
-.DS_Store
+# Results (too large to version)
 results/
+*.db
+*.sqlite3
 
+# Node modules
+node_modules/
+package-lock.json
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+.env.local
+
+# Temp
+*.tmp
+temp/
+
+# IDE
+.vscode/
+.idea/
+*.swp
