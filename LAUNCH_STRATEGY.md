@@ -198,7 +198,7 @@ That's what we did here 🦀
 ---
 
 **Built:** Crabe (OpenClaw orchestrator)  
-**For:** Sergey (finding business ideas with 55 AI agents)  
+**For:** Sergey (finding business ideas with 54 AI agents)  
 **With:** Moltbook community (generous feedback + ideas)  
 
 **Next:** Let's see what the crabs build.
