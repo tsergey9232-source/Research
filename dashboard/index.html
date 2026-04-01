@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🦀 Research Lab — Pipeline Monitor</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    background: #161b22;
+    border-bottom: 1px solid #30363d;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+
+  header h1 { font-size: 15px; font-weight: 600; color: #58a6ff; }
+
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #3fb950;
+    display: inline-block;
+    animation: pulse 2s infinite;
+  }
+  .status-dot.idle { background: #8b949e; animation: none; }
+  .status-dot.error { background: #f85149; animation: none; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .status-text { font-size: 11px; color: #8b949e; }
+
+  .run-selector {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .run-selector select {
+    background: #21262d;
+    color: #e6edf3;
+    border: 1px solid #30363d;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    max-width: 380px;
+  }
+
+  .auto-badge {
+    background: #388bfd26;
+    color: #58a6ff;
+    border: 1px solid #388bfd;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+  }
+
+  main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .sidebar {
+    width: 220px;
+    background: #161b22;
+    border-right: 1px solid #30363d;
+    padding: 12px;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+  .sidebar h2 { font-size: 11px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+
+  .stage {
+    padding: 8px 10px;
+    border-radius: 6px;
+    margin-bottom: 4px;
+    border: 1px solid transparent;
+    cursor: default;
+    transition: all 0.2s;
+  }
+  .stage.done { border-color: #3fb95040; background: #3fb95010; }
+  .stage.active { border-color: #388bfd80; background: #388bfd15; }
+  .stage.pending { border-color: #30363d; color: #8b949e; }
+  .stage.error { border-color: #f8514940; background: #f8514910; }
+
+  .stage-icon { margin-right: 6px; }
+  .stage-name { font-size: 12px; }
+  .stage-time { font-size: 10px; color: #8b949e; margin-top: 2px; }
+
+  .log-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .log-toolbar {
+    background: #161b22;
+    border-bottom: 1px solid #30363d;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  .log-toolbar span { font-size: 11px; color: #8b949e; }
+
+  .btn {
+    background: #21262d;
+    color: #e6edf3;
+    border: 1px solid #30363d;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn:hover { background: #30363d; }
+  .btn.active { background: #388bfd26; border-color: #388bfd; color: #58a6ff; }
+
+  #log-output {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    line-height: 1.7;
+  }
+
+  .log-line { display: block; padding: 1px 0; }
+  .log-line .ts { color: #484f58; margin-right: 8px; }
+  .log-line.success .icon, .log-line.success .ts { color: #3fb950; }
+  .log-line.warning .icon, .log-line.warning .ts { color: #d29922; }
+  .log-line.error .icon, .log-line.error .ts { color: #f85149; }
+  .log-line.info .icon, .log-line.info .ts { color: #58a6ff; }
+  .log-line.action .icon, .log-line.action .ts { color: #a371f7; }
+  .log-line.header { color: #e6edf3; font-weight: 600; margin: 8px 0 4px; }
+  .log-line.subtext { color: #8b949e; }
+
+  .no-log {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #484f58;
+    gap: 12px;
+  }
+  .no-log .big { font-size: 48px; }
+  .no-log p { font-size: 13px; color: #8b949e; }
+
+  .stats-bar {
+    background: #161b22;
+    border-top: 1px solid #30363d;
+    padding: 6px 16px;
+    display: flex;
+    gap: 24px;
+    flex-shrink: 0;
+  }
+  .stat { font-size: 11px; color: #8b949e; }
+  .stat b { color: #e6edf3; }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="status-dot idle" id="dot"></span>
+  <h1>🦀 Research Lab — Pipeline Monitor</h1>
+  <span class="status-text" id="status-text">Инициализация...</span>
+  <div class="run-selector">
+    <span style="font-size:11px;color:#8b949e">Исследование:</span>
+    <select id="run-select" onchange="selectRun(this.value)">
+      <option value="">— нет исследований —</option>
+    </select>
+    <span class="auto-badge" id="auto-badge">● live</span>
+  </div>
+</header>
+
+<main>
+  <div class="sidebar">
+    <h2>Этапы</h2>
+    <div id="stages">
+      <div class="stage pending"><span class="stage-icon">💡</span><span class="stage-name">Генерация</span></div>
+      <div class="stage pending"><span class="stage-icon">🔀</span><span class="stage-name">Дедупликация</span></div>
+      <div class="stage pending"><span class="stage-icon">⚖️</span><span class="stage-name">Оценка жюри</span></div>
+      <div class="stage pending"><span class="stage-icon">🔢</span><span class="stage-name">Рейтинг</span></div>
+      <div class="stage pending"><span class="stage-icon">✅</span><span class="stage-name">Топ-20</span></div>
+      <div class="stage pending"><span class="stage-icon">🔍</span><span class="stage-name">Исследование</span></div>
+      <div class="stage pending"><span class="stage-icon">🧹</span><span class="stage-name">Чистка</span></div>
+      <div class="stage pending"><span class="stage-icon">📊</span><span class="stage-name">Аналитика</span></div>
+      <div class="stage pending"><span class="stage-icon">🏆</span><span class="stage-name">Консолидация</span></div>
+      <div class="stage pending"><span class="stage-icon">📋</span><span class="stage-name">Финальный отчёт</span></div>
+    </div>
+  </div>
+
+  <div class="log-panel">
+    <div class="log-toolbar">
+      <span>📄 pipeline-log.md</span>
+      <button class="btn active" id="btn-auto" onclick="toggleAuto()">⟳ Авто-обновление</button>
+      <button class="btn" onclick="scrollToBottom()">↓ В конец</button>
+      <button class="btn" onclick="copyLog()">⎘ Копировать</button>
+      <span id="last-update" style="margin-left:auto"></span>
+    </div>
+
+    <div id="log-output">
+      <div class="no-log">
+        <div class="big">🦀</div>
+        <p>Ожидание запуска исследования...</p>
+        <p style="font-size:11px;color:#484f58">Запусти команду и лог появится здесь</p>
+      </div>
+    </div>
+
+    <div class="stats-bar">
+      <div class="stat">Строк: <b id="stat-lines">0</b></div>
+      <div class="stat">Этап: <b id="stat-stage">—</b></div>
+      <div class="stat">Статус: <b id="stat-status">—</b></div>
+      <div class="stat">Последнее событие: <b id="stat-last">—</b></div>
+    </div>
+  </div>
+</main>
+
+<script>
+let autoRefresh = true;
+let interval = null;
+let currentRun = null;
+let rawLog = '';
+let lineCount = 0;
+
+const STAGE_KEYWORDS = [
+  { key: 'Генерация', stage: 0 },
+  { key: 'Дедупликация', stage: 1 },
+  { key: 'Оценка', stage: 2 },
+  { key: 'Рейтинг', stage: 3 },
+  { key: 'Топ-20', stage: 4 },
+  { key: 'Исследование', stage: 5 },
+  { key: 'Чистка', stage: 6 },
+  { key: 'Аналитика', stage: 7 },
+  { key: 'Консолидация', stage: 8 },
+  { key: 'Финальный', stage: 9 },
+];
+
+async function loadRuns() {
+  try {
+    const res = await fetch('/api/runs');
+    const runs = await res.json();
+    const sel = document.getElementById('run-select');
+    sel.innerHTML = runs.length
+      ? runs.map(r => `<option value="${r}">${r}</option>`).join('')
+      : '<option value="">— нет исследований —</option>';
+    if (runs.length && !currentRun) {
+      currentRun = runs[0];
+      sel.value = currentRun;
+    }
+  } catch(e) {}
+}
+
+function selectRun(run) {
+  currentRun = run;
+  document.getElementById('auto-badge').textContent = '● live';
+  fetchLog();
+}
+
+function toggleAuto() {
+  autoRefresh = !autoRefresh;
+  const btn = document.getElementById('btn-auto');
+  btn.classList.toggle('active', autoRefresh);
+  document.getElementById('auto-badge').textContent = autoRefresh ? '● live' : '○ пауза';
+}
+
+function classifyLine(line) {
+  if (line.includes('✅') || line.includes('завершён') || line.includes('готово')) return 'success';
+  if (line.includes('⚠️') || line.includes('Жёлтый') || line.includes('долго')) return 'warning';
+  if (line.includes('🔴') || line.includes('❌') || line.includes('ошибка') || line.includes('ERROR')) return 'error';
+  if (line.includes('🚀') || line.includes('Запуск')) return 'info';
+  if (line.includes('🔄') || line.includes('перезапуск') || line.includes('ACTION')) return 'action';
+  if (line.startsWith('#')) return 'header';
+  if (line.startsWith('---') || line.trim() === '') return 'subtext';
+  return '';
+}
+
+function renderLog(text) {
+  if (!text) return;
+  const lines = text.split('\n');
+  lineCount = lines.length;
+  document.getElementById('stat-lines').textContent = lineCount;
+
+  const output = document.getElementById('log-output');
+  const wasAtBottom = output.scrollHeight - output.scrollTop - output.clientHeight < 60;
+
+  output.innerHTML = lines.map(line => {
+    if (!line.trim()) return '<span class="log-line subtext"> </span>';
+    const cls = classifyLine(line);
+
+    // Подсветка временных меток [HH:MM]
+    let html = line
+      .replace(/\[(\d{2}:\d{2}[^\]]*)\]/g, '<span class="ts">[$1]</span>')
+      .replace(/(✅|🚀|⚠️|🔴|❌|🔄|📁|📊|🔍|💡|⚖️|🔢|🧹|🏆|📋|🦀)/g, '<span class="icon">$1</span>');
+
+    return `<span class="log-line ${cls}">${html}</span>`;
+  }).join('\n');
+
+  if (wasAtBottom) scrollToBottom();
+
+  // Обновить статистику
+  const lastMeaningful = lines.filter(l => l.trim() && !l.startsWith('---')).pop() || '—';
+  document.getElementById('stat-last').textContent = lastMeaningful.slice(0, 60) + (lastMeaningful.length > 60 ? '...' : '');
+
+  // Определить текущий этап
+  let activeStage = -1;
+  STAGE_KEYWORDS.forEach(({ key, stage }) => {
+    if (text.includes(key)) activeStage = Math.max(activeStage, stage);
+  });
+  updateStages(activeStage, text);
+
+  const stageName = activeStage >= 0 ? STAGE_KEYWORDS.find(s => s.stage === activeStage)?.key : '—';
+  document.getElementById('stat-stage').textContent = stageName || '—';
+}
+
+function updateStages(activeIdx, text) {
+  const stages = document.querySelectorAll('.stage');
+  stages.forEach((el, i) => {
+    el.className = 'stage';
+    if (i < activeIdx) {
+      el.classList.add('done');
+    } else if (i === activeIdx) {
+      const isComplete = text.includes('завершён') && text.lastIndexOf('завершён') > text.lastIndexOf('Запуск');
+      el.classList.add(isComplete ? 'done' : 'active');
+    } else {
+      el.classList.add('pending');
+    }
+  });
+}
+
+async function fetchLog() {
+  const dot = document.getElementById('dot');
+  const statusText = document.getElementById('status-text');
+
+  try {
+    const url = currentRun ? `/api/log?run=${encodeURIComponent(currentRun)}` : '/api/log';
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const now = new Date().toLocaleTimeString('ru-RU');
+    document.getElementById('last-update').textContent = `Обновлено: ${now}`;
+
+    if (data.status === 'no_runs') {
+      dot.className = 'status-dot idle';
+      statusText.textContent = 'Нет исследований';
+      document.getElementById('stat-status').textContent = 'Ожидание';
+      return;
+    }
+
+    if (data.status === 'no_log') {
+      dot.className = 'status-dot idle';
+      statusText.textContent = `${data.run} — лог ещё не создан`;
+      document.getElementById('stat-status').textContent = 'Ожидание старта';
+      return;
+    }
+
+    if (data.log !== rawLog) {
+      rawLog = data.log;
+      renderLog(rawLog);
+    }
+
+    dot.className = 'status-dot';
+    statusText.textContent = `${data.run}`;
+    document.getElementById('stat-status').textContent = 'Активно';
+
+  } catch(e) {
+    dot.className = 'status-dot error';
+    statusText.textContent = 'Ошибка соединения с сервером';
+    document.getElementById('stat-status').textContent = 'Ошибка';
+  }
+}
+
+function scrollToBottom() {
+  const output = document.getElementById('log-output');
+  output.scrollTop = output.scrollHeight;
+}
+
+function copyLog() {
+  navigator.clipboard.writeText(rawLog).then(() => {
+    const btn = event.target;
+    btn.textContent = '✓ Скопировано';
+    setTimeout(() => btn.textContent = '⎘ Копировать', 1500);
+  });
+}
+
+async function init() {
+  await loadRuns();
+  await fetchLog();
+  interval = setInterval(async () => {
+    if (!autoRefresh) return;
+    await loadRuns();
+    await fetchLog();
+  }, 2000);
+}
+
+init();
+</script>
+</body>
+</html>

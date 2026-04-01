@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>🦀 Research Lab — Office</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #0d1117;
+  color: #e6edf3;
+  font-family: 'SF Mono', monospace;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+header {
+  background: #161b22;
+  border-bottom: 1px solid #21262d;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+header h1 { font-size: 14px; font-weight: 600; color: #58a6ff; }
+header .sub { font-size: 11px; color: #8b949e; }
+.pulse-dot { width:7px;height:7px;border-radius:50%;background:#484f58;display:inline-block; }
+.pulse-dot.live { background:#3fb950;animation:pulse 1.5s infinite; }
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+#header-stage { font-size:13px;color:#8b949e;margin-left:8px; }
+.hbtn { background:#21262d;color:#8b949e;border:1px solid #30363d;padding:4px 10px;border-radius:5px;font-size:11px;cursor:pointer;font-family:inherit; }
+.hbtn:hover{background:#30363d;color:#e6edf3;}
+.ml-auto{margin-left:auto;}
+
+/* MAIN */
+.main { display:flex; flex:1; overflow:hidden; }
+
+/* CANVAS WRAP */
+.canvas-wrap {
+  flex:1;
+  overflow:auto;
+  position:relative;
+}
+#canvas { display:block; }
+
+/* RIGHT SIDEBAR */
+.sidebar {
+  width:300px;
+  background:#161b22;
+  border-left:1px solid #21262d;
+  display:flex;
+  flex-direction:column;
+  flex-shrink:0;
+}
+.sb-header {
+  padding:8px 12px;
+  border-bottom:1px solid #21262d;
+  font-size:12px;
+  color:#8b949e;
+  text-transform:uppercase;
+  letter-spacing:.5px;
+}
+#activity-feed {
+  flex:1;
+  overflow-y:auto;
+  padding:8px 10px;
+  font-size:11px;
+}
+.fl { display:flex;gap:6px;padding:2px 0;line-height:1.5; }
+.fl .ft { color:#30363d;width:50px;flex-shrink:0;font-variant-numeric:tabular-nums; }
+.fl .fm { color:#8b949e;flex:1; }
+.fl.start .fm{color:#58a6ff;}
+.fl.done .fm{color:#7ee787;}
+.fl.warn .fm{color:#e3b341;}
+.fl.error .fm{color:#ff7b72;}
+.fl.action .fm{color:#c9a9f5;}
+
+.stage-list { border-top:1px solid #21262d;padding:8px 10px; }
+.si {
+  display:flex;align-items:center;gap:6px;
+  padding:3px 6px;border-radius:3px;
+  font-size:12px;color:#484f58;
+}
+.si.done{color:#7ee787;}
+.si.active{color:#58a6ff;background:#388bfd10;}
+.sd{width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0;}
+.si.active .sd{animation:pulse 1.5s infinite;}
+
+/* AGENT POPUP — single, large */
+#agent-popup {
+  display:none;
+  position:absolute;
+  width:380px;
+  background:#161b22;
+  border:1px solid #388bfd;
+  border-radius:8px;
+  box-shadow:0 8px 40px rgba(0,0,0,.7),0 0 0 1px #388bfd30;
+  z-index:200;
+  animation:popIn .15s ease;
+  flex-direction:column;
+}
+#agent-popup.show{display:flex;}
+@keyframes popIn{from{opacity:0;transform:scale(.93)}to{opacity:1;transform:scale(1)}}
+.pop-head {
+  background:#21262d;
+  padding:8px 12px;
+  border-radius:7px 7px 0 0;
+  display:flex;align-items:center;gap:8px;
+  border-bottom:1px solid #30363d;
+  cursor:move;
+  flex-shrink:0;
+}
+.pop-name{font-weight:600;color:#e6edf3;font-size:13px;flex:1;}
+.pop-status{
+  font-size:10px;padding:2px 8px;border-radius:10px;
+  background:#30363d;color:#8b949e;
+}
+.pop-status.active{background:#3fb95020;color:#3fb950;}
+.pop-status.done{background:#388bfd20;color:#58a6ff;}
+.pop-status.stale{background:#e3b34120;color:#e3b341;}
+.pop-status.error{background:#f8514920;color:#ff7b72;}
+.pop-close{cursor:pointer;color:#484f58;font-size:16px;line-height:1;padding:0 2px;}
+.pop-close:hover{color:#f85149;}
+.pop-role{
+  padding:8px 12px;
+  color:#8b949e;font-size:11px;line-height:1.6;
+  border-bottom:1px solid #21262d;
+  flex-shrink:0;
+}
+.pop-log{
+  padding:8px 10px;
+  min-height:140px;
+  max-height:260px;
+  overflow-y:auto;
+  font-size:11px;
+  line-height:1.7;
+  flex:1;
+}
+.pl{padding:1px 0;}
+.pl.idea{color:#7ee787;}
+.pl.action{color:#c9a9f5;}
+.pl.done-line{color:#3fb950;}
+.pl.default{color:#8b949e;}
+.pop-files{
+  padding:6px 10px;
+  border-top:1px solid #21262d;
+  display:flex;flex-wrap:wrap;gap:4px;
+  flex-shrink:0;
+}
+.file-link{
+  display:inline-flex;align-items:center;gap:4px;
+  background:#21262d;border:1px solid #30363d;
+  padding:3px 8px;border-radius:4px;
+  color:#58a6ff;font-size:10px;cursor:pointer;
+}
+.file-link:hover{background:#388bfd20;border-color:#388bfd;}
+
+/* FINAL OVERLAY */
+#final-overlay{
+  display:none;position:fixed;inset:0;
+  background:#0d1117f0;z-index:300;overflow-y:auto;padding:24px;
+}
+.final-hdr{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
+.final-hdr h2{font-size:20px;flex:1;}
+.btn{background:#21262d;color:#e6edf3;border:1px solid #30363d;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;}
+.btn:hover{background:#30363d;}
+.btn.primary{background:#388bfd;border-color:#388bfd;}
+.idea-card{background:#161b22;border:1px solid #21262d;border-radius:8px;margin-bottom:10px;overflow:hidden;}
+.idea-card-hdr{padding:12px 16px;display:flex;align-items:center;gap:10px;cursor:pointer;}
+.idea-card-hdr:hover{background:#21262d;}
+.idea-num{font-size:10px;color:#484f58;width:28px;}
+.idea-title{font-size:13px;font-weight:600;flex:1;}
+.badge-g{background:#3fb95020;color:#3fb950;border:1px solid #3fb95040;padding:2px 8px;border-radius:10px;font-size:10px;}
+.badge-y{background:#d2992220;color:#e3b341;border:1px solid #d2992240;padding:2px 8px;border-radius:10px;font-size:10px;}
+.badge-r{background:#f8514920;color:#ff7b72;border:1px solid #f8514940;padding:2px 8px;border-radius:10px;font-size:10px;}
+.idea-body{padding:0 16px 14px;color:#8b949e;line-height:1.7;display:none;font-size:12px;}
+.idea-body.open{display:block;}
+
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:#21262d;border-radius:2px;}
+</style>
+</head>
+<body>
+<header>
+  <span style="font-size:20px">🦀</span>
+  <div>
+    <h1>Research Lab — Command Center</h1>
+    <div class="sub">54 агента · AI-исследование бизнес-идей</div>
+  </div>
+  <span class="pulse-dot" id="hdot"></span>
+  <span id="header-stage">Ожидание запуска</span>
+  <div class="ml-auto" style="display:flex;gap:8px;">
+    <button class="hbtn" id="btn-report" style="display:none" onclick="showFinal()">📋 Финальный отчёт</button>
+  </div>
+</header>
+
+<div class="main">
+  <div class="canvas-wrap" id="cwrap">
+    <canvas id="canvas"></canvas>
+    <!-- Single agent popup -->
+    <div id="agent-popup">
+      <div class="pop-head" id="pop-head">
+        <span class="pop-name" id="pop-name">—</span>
+        <span class="pop-status" id="pop-status">Отдыхает</span>
+        <span class="pop-close" onclick="closePopup()">×</span>
+      </div>
+      <div class="pop-role" id="pop-role"></div>
+      <div class="pop-log" id="pop-log"></div>
+      <div class="pop-files" id="pop-files" style="display:none"></div>
+    </div>
+  </div>
+
+  <div class="sidebar">
+    <div class="sb-header">⚡ Активность pipeline</div>
+    <div id="activity-feed">
+      <div class="fl"><span class="ft">—</span><span class="fm">Ожидание запуска...</span></div>
+    </div>
+    <div class="stage-list" id="stage-list"></div>
+  </div>
+</div>
+
+<!-- FINAL -->
+<div id="final-overlay">
+  <div class="final-hdr">
+    <h2>📊 Финальный отчёт</h2>
+    <button class="btn primary" onclick="exportPDF()">⬇ PDF</button>
+    <button class="btn" onclick="document.getElementById('final-overlay').style.display='none'">✕</button>
+  </div>
+  <div id="final-content"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// AGENTS DATA
+// ═══════════════════════════════════════════════
+const DEPTS = [
+  { id:'creative', name:'🎨 Креативный отдел', col:'#388bfd', agents:[
+    {id:'creator-01',name:'Прагматик',role:'Проверенные модели с понятной unit-экономикой. Клоны успешных бизнесов.'},
+    {id:'creator-02',name:'Безумец',role:'Абсурдные комбинации. 80% бред, 20% гениальность.'},
+    {id:'creator-03',name:'Копикат',role:'Что работает в других странах? Международный арбитраж идей.'},
+    {id:'creator-04',name:'Трендсёрфер',role:'Быстро растущие рынки 30%+. Venturе раунды, YC batches.'},
+    {id:'creator-05',name:'Лентяй',role:'Максимально пассивные модели. Подписки, лицензии, автопилот.'},
+    {id:'creator-06',name:'Инженер',role:'SaaS, платформы, инструменты. Построить раз — продавать вечно.'},
+    {id:'creator-07',name:'Торговец',role:'Маржа 70%+. Арбитраж, перепродажа, посредничество.'},
+    {id:'creator-08',name:'Душевед',role:'Боли людей. За что платят не торгуясь? Срочные потребности.'},
+    {id:'creator-09',name:'Бунтарь',role:'Disruption. Кто зажрался? Ниши с завышенными ценами.'},
+    {id:'creator-10',name:'Визионер',role:'Думает на 5 лет вперёд. Будущие потребности.'},
+    {id:'creator-11',name:'Массовик',role:'Товары массового потребления. Что нужно миллионам каждый день?'},
+    {id:'creator-12',name:'Золотая Жила',role:'Где не экономят в любой сфере. Здоровье, дети, страх, статус.'},
+  ]},
+  { id:'jury', name:'⚖️ Жюри', col:'#a371f7', agents:[
+    {id:'jury-01',name:'Стартапер',role:'Можно ли запустить одному за 2-4 недели?'},
+    {id:'jury-02',name:'Финансист',role:'CAC, LTV, маржа, точка безубыточности.'},
+    {id:'jury-03',name:'Маркетолог',role:'Каналы привлечения. Откуда первые 100 клиентов?'},
+    {id:'jury-04',name:'Технарь',role:'Техническая реализуемость. Можно ли на AI-агентах?'},
+    {id:'jury-05',name:'Скептик',role:'Почему НЕ сработает? Риски и подводные камни.'},
+    {id:'jury-06',name:'Рыночник',role:'TAM/SAM/SOM. Достаточно ли большой рынок?'},
+    {id:'jury-07',name:'Потребитель',role:'Глазами обычного человека. Я бы за это заплатил?'},
+    {id:'jury-08',name:'Масштабщик',role:'Путь от $1K до $100K/мес. Что сломается?'},
+    {id:'jury-09',name:'Юрист',role:'GDPR, лицензии, регуляторные ловушки.'},
+    {id:'jury-10',name:'Венчурщик',role:'Потенциал 10x. Есть ли moat? Network effects?'},
+  ]},
+  { id:'research', name:'🔍 Исследователи', col:'#3fb950', agents:[
+    {id:'researcher-01',name:'Гуглер',short:'Гуглер',role:'Google до 100-й страницы. 20-30 переформулировок. filetype:pdf, site:.'},
+    {id:'researcher-02',name:'Реддитор',short:'Реддитор',role:'Reddit: жалобы, успехи, AMA. "I wish there was..."'},
+    {id:'researcher-03',name:'Ютубер',short:'Ютубер',role:'YouTube: транскрипции роликов, анализ комментариев.'},
+    {id:'researcher-04',name:'Исследователь рынков',short:'Рынки',role:'Statista, McKinsey, Gartner, CB Insights. Размер рынка, TAM/SAM/SOM, темпы роста, прогнозы на 3-5 лет.'},
+    {id:'researcher-05',name:'Стартап-скаут',short:'Стартап-скаут',role:'Product Hunt, G2, Capterra, Crunchbase, TrustPilot. Кто уже работает в нише? Ценовые модели конкурентов.'},
+    {id:'researcher-06',name:'Подкастер',short:'Подкастер',role:'Indie Hackers, My First Million, SaaS Club. Транскрипции ключевых эпизодов, реальные цифры выручки и ошибок.'},
+    {id:'researcher-07',name:'Исследователь Азии',short:'Азия',role:'Китай, Япония, Корея, Индия, SEA. Baidu, Naver, Yahoo Japan.'},
+    {id:'researcher-08',name:'Исследователь Африки',short:'Африка',role:'Нигерия, Кения, ЮАР, Египет. TechCabal, Disrupt Africa.'},
+    {id:'researcher-09',name:'Исследователь LatAm',short:'LatAm',role:'Бразилия, Мексика, Аргентина, Колумбия. Испанский и португальский.'},
+    {id:'researcher-10',name:'Исследователь Европы',short:'Европа',role:'DE, FR, UK, Скандинавия, Южная Европа. Gründerszene, Sifted.'},
+    {id:'researcher-11',name:'Исследователь СНГ',short:'СНГ',role:'Россия, Казахстан, Армения, Грузия, Беларусь. vc.ru, Habr.'},
+    {id:'researcher-12',name:'Исследователь арабских стран',short:'Арабы',role:'ОАЭ, Саудовская Аравия, Катар, Бахрейн. Wamda, Magnitt.'},
+    {id:'researcher-13',name:'Исследователь финансов',short:'Финансы',role:'SEC filings, annual reports, P&L компаний. SimilarWeb, ProfitWell.'},
+    {id:'researcher-14',name:'Исследователь нишей',short:'Ниши',role:'HN, IndieHackers, Discord, niche-форумы, Telegram-каналы.'},
+    {id:'researcher-15',name:'Антиисследователь',short:'Антиисслед.',role:'Ищёт всё ПРОТИВ идеи. Провалы, риски, судебные иски, "X is dead".'},
+    {id:'researcher-16',name:'Краулер',short:'Краулер',role:'Мультиязычный поиск: 12 языков, локальные поисковики по всему миру.'},
+  ]},
+  { id:'analysts', name:'📊 Аналитики', col:'#f85149', agents:[
+    {id:'analyst-01',name:'Стратег',role:'Конкурентная позиция. Где на рынке? Есть ли moat?'},
+    {id:'analyst-02',name:'Практик',role:'Пошаговый план. Что делать в понедельник утром?'},
+    {id:'analyst-03',name:'Числовик',role:'Финансовая модель. 3 сценария: оптимизм/реализм/пессимизм.'},
+    {id:'analyst-04',name:'Адвокат дьявола',role:'Топ-5 рисков. Ложные допущения. Почему провалится?'},
+    {id:'analyst-05',name:'Синтетик',role:'Паттерны из других ниш. Неочевидные связи.'},
+    {id:'analyst-06',name:'Клиентолог',role:'Портрет клиента. JTBD. За что именно платят?'},
+    {id:'analyst-07',name:'Автоматизатор',role:'Как одному на AI-агентах? Какой стек?'},
+    {id:'analyst-08',name:'Маркетолог',role:'Каналы, бюджет, CAC. Первые 100 клиентов.'},
+    {id:'analyst-09',name:'Трендовик',role:'Это хайп или надолго? Что через 3 года?'},
+    {id:'analyst-10',name:'Глобалист',role:'Международное масштабирование. Лучший рынок для старта.'},
+  ]},
+  { id:'ops', name:'⚙️ Операции', col:'#e3b341', agents:[
+    {id:'ops-01',name:'Дедупликатор',role:'Убирает повторы идей (порог 80%).'},
+    {id:'ops-02',name:'Считовод',role:'Средние баллы жюри. Рейтинг идей.'},
+    {id:'ops-03',name:'Чистильщик',role:'Убирает мусор из исследований.'},
+    {id:'ops-04',name:'Верх. аналитик',role:'Консолидирует 200 заключений в 20 отчётов.'},
+  ]},
+];
+
+const ORCH = {id:'crabe',name:'🦀 Crabe',role:'Оркестратор. Управляет pipeline. Единственный контакт с Сергеем. Мониторит, перезапускает, докладывает.',alwaysActive:true};
+
+// state
+const state = {};
+[...DEPTS.flatMap(d=>d.agents),ORCH].forEach(a => {
+  state[a.id] = {status: a.alwaysActive?'active':'idle', log:[], files:[]};
+});
+
+// ═══════════════════════════════════════════════
+// LAYOUT  — горизонтальная сетка
+// ═══════════════════════════════════════════════
+const DW=70, DH=56;   // desk size
+const GAP_X=18, GAP_Y=38;  // gap between desks
+const DEPT_GAP_X=50, DEPT_GAP_Y=60; // gap between departments
+const LABEL_H=26; // увеличен под крупный шрифт заголовка
+
+let positions=[]; // {x,y,agent,deptColor}
+let canvasW=0, canvasH=0;
+
+function buildLayout(){
+  positions=[];
+  const PAD=20;
+
+  // Ряд 1: Creative (12) | Jury (10)
+  // Ряд 2: Research (16) | Analysts (10)
+  // Ряд 3: Ops (5) | Crabe (1)
+
+  const row1Depts = [DEPTS[0], DEPTS[1]];         // Creative, Jury
+  const row2Depts = [DEPTS[2], DEPTS[3]];         // Research, Analysts
+  const row3Items = [...DEPTS[4].agents, ORCH];    // Ops + Crabe
+
+  let maxH = 0;
+  let curX = PAD;
+
+  // --- ROW 1 ---
+  let rowY = PAD;
+  let rowH = 0;
+  let rowX = PAD;
+
+  row1Depts.forEach((dept,di) => {
+    const cols = dept.id==='creative' ? 6 : 5;
+    const rows = Math.ceil(dept.agents.length/cols);
+    const deptW = cols*(DW+GAP_X)-GAP_X;
+    const deptH = LABEL_H + rows*(DH+GAP_Y)-GAP_Y;
+    dept.agents.forEach((a,i)=>{
+      const col=i%cols, row=Math.floor(i/cols);
+      positions.push({
+        x: rowX + col*(DW+GAP_X),
+        y: rowY + LABEL_H + row*(DH+GAP_Y),
+        agent:a, col:dept.col,
+        deptId: dept.id
+      });
+    });
+    dept._layout = {x:rowX, y:rowY, w:deptW, h:deptH, name:dept.name, col:dept.col};
+    rowH = Math.max(rowH, deptH);
+    rowX += deptW + DEPT_GAP_X;
+  });
+
+  canvasW = rowX - DEPT_GAP_X + PAD;
+
+  // --- ROW 2 ---
+  rowY += rowH + DEPT_GAP_Y;
+  rowX = PAD;
+  rowH = 0;
+
+  row2Depts.forEach((dept,di) => {
+    const cols = dept.id==='research' ? 8 : 5;
+    const rows = Math.ceil(dept.agents.length/cols);
+    const deptW = cols*(DW+GAP_X)-GAP_X;
+    const deptH = LABEL_H + rows*(DH+GAP_Y)-GAP_Y;
+    dept.agents.forEach((a,i)=>{
+      const col=i%cols, row=Math.floor(i/cols);
+      positions.push({
+        x: rowX + col*(DW+GAP_X),
+        y: rowY + LABEL_H + row*(DH+GAP_Y),
+        agent:a, col:dept.col,
+        deptId: dept.id
+      });
+    });
+    dept._layout = {x:rowX, y:rowY, w:deptW, h:deptH, name:dept.name, col:dept.col};
+    rowH = Math.max(rowH, deptH);
+    rowX += deptW + DEPT_GAP_X;
+  });
+
+  canvasW = Math.max(canvasW, rowX - DEPT_GAP_X + PAD);
+
+  // --- ROW 3: Ops + Crabe ---
+  rowY += rowH + DEPT_GAP_Y;
+  rowX = PAD;
+  const row3All = row3Items;
+  const cols3 = row3All.length; // 6 in a row
+  row3All.forEach((a,i) => {
+    positions.push({
+      x: rowX + i*(DW+GAP_X),
+      y: rowY + LABEL_H,
+      agent:a,
+      col: a.id==='crabe' ? '#3fb950' : DEPTS[4].col,
+      deptId: a.id==='crabe'?'orch':'ops'
+    });
+  });
+  DEPTS[4]._layout = {x:PAD, y:rowY, w:cols3*(DW+GAP_X)-GAP_X, h:LABEL_H+DH, name:'⚙️ Операции + 🦀 Оркестратор', col:'#e3b341'};
+
+  canvasH = rowY + LABEL_H + DH + GAP_Y + PAD;
+  canvasW = Math.max(canvasW, cols3*(DW+GAP_X)-GAP_X + PAD*2);
+
+  const cv = document.getElementById('canvas');
+  cv.width = canvasW;
+  cv.height = canvasH;
+}
+
+// ═══════════════════════════════════════════════
+// RENDERING
+// ═══════════════════════════════════════════════
+const cv = document.getElementById('canvas');
+const ctx = cv.getContext('2d');
+let tick = 0;
+
+function drawDesk(x,y,agent,s,accentCol){
+  const active = s.status==='active';
+  const done   = s.status==='done';
+  const stale  = s.status==='stale';
+  const error  = s.status==='error';
+  const alwaysOn = agent.alwaysActive;
+
+  // Glow
+  if(active||alwaysOn){
+    ctx.save();
+    ctx.shadowColor = alwaysOn?'#3fb950':accentCol;
+    ctx.shadowBlur  = 16 + Math.sin(tick*0.05)*5;
+    ctx.fillStyle   = (alwaysOn?'#3fb950':accentCol)+'18';
+    ctx.beginPath(); ctx.roundRect(x-4,y-4,DW+8,DH+8,6);
+    ctx.fill();
+    ctx.restore();
+  }
+  // Stale: dim orange border
+  if(stale){
+    ctx.save();
+    ctx.shadowColor='#e3b341';ctx.shadowBlur=6;
+    ctx.strokeStyle='#e3b34140';ctx.lineWidth=1;
+    ctx.beginPath();ctx.roundRect(x-2,y-2,DW+4,DH+4,5);ctx.stroke();
+    ctx.restore();
+  }
+
+  // Desk surface
+  ctx.fillStyle = done?'#1a2a1a' : stale?'#1e1a10' : error?'#1e1010' : active||alwaysOn?'#12202e':'#13181f';
+  ctx.strokeStyle = done?'#3fb95050' : stale?'#e3b34150' : error?'#f8514950' : active||alwaysOn ? accentCol+'70':'#1e242d';
+  ctx.lineWidth=1;
+  ctx.beginPath(); ctx.roundRect(x,y,DW,DH,4); ctx.fill(); ctx.stroke();
+
+  // Monitor
+  const mx=x+5, my=y+8;
+  const mw=30, mh=20;
+  ctx.fillStyle = active||alwaysOn?'#0d2040':'#0d1117';
+  ctx.fillRect(mx,my,mw,mh);
+  ctx.strokeStyle = active||alwaysOn ? accentCol+'80':'#21262d';
+  ctx.lineWidth=1;
+  ctx.strokeRect(mx,my,mw,mh);
+
+  // Screen
+  if(active||alwaysOn){
+    for(let i=0;i<4;i++){
+      const lw=((tick*3+i*9)%24)+2;
+      ctx.fillStyle=i===0?accentCol:(accentCol+'60');
+      ctx.fillRect(mx+2,my+2+i*4,Math.min(lw,mw-4),2);
+    }
+  } else if(done){
+    ctx.fillStyle='#3fb950';
+    ctx.font='bold 12px monospace';
+    ctx.fillText('✓',mx+10,my+14);
+  }
+
+  // Monitor stand
+  ctx.fillStyle='#21262d';
+  ctx.fillRect(mx+12,my+mh,5,4);
+  ctx.fillRect(mx+7,my+mh+4,15,3);
+
+  // Chair
+  const cx2=x+DW-20, cy2=y+DH-16;
+  ctx.fillStyle=active||alwaysOn?'#1a2840':'#161b22';
+  ctx.fillRect(cx2,cy2,18,14);
+  ctx.fillStyle=active||alwaysOn?'#21304a':'#1e242d';
+  ctx.fillRect(cx2-1,cy2-2,20,5);
+
+  // Agent sprite
+  const sx=x+DW-18, sy=y+8;
+  const bob = (active||alwaysOn) ? Math.sin(tick*0.09)*2 : 0;
+  const spriteColor = alwaysOn?'#3fb950':active?accentCol:done?'#3fb95080':stale?'#e3b34160':error?'#f8514960':'#21262d';
+  drawSprite(sx,sy+bob,spriteColor,active||alwaysOn);
+
+  // ZZZ (idle only)
+  if(!active&&!alwaysOn&&!done&&!stale&&!error){
+    const za=(Math.sin(tick*0.04)+1)/2;
+    ctx.fillStyle=`rgba(100,120,160,${za*0.7})`;
+    ctx.font='9px monospace';
+    ctx.fillText('z',sx+14+Math.sin(tick*0.02)*2,sy-5-Math.sin(tick*0.03)*3);
+  }
+  // ? (stale — no DONE, not moving)
+  if(stale){
+    const fa=(Math.sin(tick*0.03)+1)/2*0.5+0.3;
+    ctx.fillStyle=`rgba(227,179,65,${fa})`;
+    ctx.font='bold 11px monospace';
+    ctx.textAlign='center';
+    ctx.fillText('?',sx+8,sy-3);
+    ctx.textAlign='left';
+  }
+
+  // Name label — читаемый системный шрифт
+  ctx.font='bold 10px -apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif';
+  ctx.textAlign='center';
+  ctx.fillStyle=alwaysOn?'#3fb950':active?accentCol:done?'#7ee787':stale?'#e3b341':error?'#ff7b72':'#c0c8d0';
+  const label = agent.short || agent.name;
+  const nm = label.length > 13 ? label.slice(0,12)+'…' : label;
+  ctx.fillText(nm, x+DW/2, y+DH+14);
+  ctx.textAlign='left';
+}
+
+function drawSprite(x,y,color,active){
+  ctx.fillStyle=color;
+  ctx.fillRect(x+3,y,8,8);
+  ctx.fillStyle=active?color+'cc':color+'88';
+  ctx.fillRect(x+2,y+8,10,9);
+  ctx.fillRect(x-1,y+9,4,5);
+  ctx.fillRect(x+11,y+9,4,5);
+  ctx.fillRect(x+3,y+17,4,5);
+  ctx.fillRect(x+7,y+17,4,5);
+}
+
+function drawDeptLabel(layout){
+  ctx.font='bold 14px SF Mono,monospace';
+  ctx.fillStyle=layout.col;
+  ctx.fillText(layout.name, layout.x, layout.y+15);
+}
+
+function drawGrid(){
+  ctx.strokeStyle='#161b2220';
+  ctx.lineWidth=0.5;
+  for(let x=0;x<canvasW;x+=24){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvasH);ctx.stroke();}
+  for(let y=0;y<canvasH;y+=24){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvasW,y);ctx.stroke();}
+}
+
+function render(){
+  ctx.clearRect(0,0,canvasW,canvasH);
+  ctx.fillStyle='#0d1117';
+  ctx.fillRect(0,0,canvasW,canvasH);
+
+  drawGrid();
+
+  // Dept labels
+  [...DEPTS].forEach(d=>{ if(d._layout) drawDeptLabel(d._layout); });
+  // Row 3 label
+  if(DEPTS[4]._layout) drawDeptLabel(DEPTS[4]._layout);
+
+  positions.forEach(p=>{
+    drawDesk(p.x,p.y,p.agent,state[p.agent.id],p.col);
+  });
+
+  tick++;
+  requestAnimationFrame(render);
+}
+
+// ═══════════════════════════════════════════════
+// SINGLE POPUP
+// ═══════════════════════════════════════════════
+let activePopupId=null;
+
+function openPopup(agentId, posX, posY){
+  if(activePopupId===agentId){ closePopup(); return; }
+  activePopupId=agentId;
+
+  // Find agent
+  let agent=null;
+  for(const d of DEPTS){
+    const a=d.agents.find(a=>a.id===agentId);
+    if(a){agent=a;break;}
+  }
+  if(!agent&&ORCH.id===agentId) agent=ORCH;
+  if(!agent) return;
+
+  const s=state[agentId];
+  document.getElementById('pop-name').textContent=agent.name;
+  document.getElementById('pop-role').textContent=agent.role;
+
+  const statusEl=document.getElementById('pop-status');
+  const statusLabel = s.status==='active'?'Работает'
+    : s.status==='done'?'Готово'
+    : s.status==='stale'?`Завис (${s.ageMinutes||'?'} мин)`
+    : s.status==='error'?'Ошибка'
+    : 'Отдыхает';
+  statusEl.textContent=statusLabel;
+  statusEl.className='pop-status'+(s.status==='active'?' active':s.status==='done'?' done':s.status==='stale'?' stale':s.status==='error'?' error':'');
+
+  const logEl=document.getElementById('pop-log');
+  logEl.innerHTML=s.log.length
+    ?s.log.map(l=>`<div class="pl ${l.cls}">${l.text}</div>`).join('')
+    :'<span style="color:#30363d">Нет активности...</span>';
+  logEl.scrollTop=logEl.scrollHeight;
+
+  const filesEl=document.getElementById('pop-files');
+  if(s.files.length){
+    filesEl.style.display='flex';
+    filesEl.innerHTML=s.files.map(f=>`<span class="file-link" onclick="openFile('${f.path}')">📄 ${f.name}</span>`).join('');
+  } else {
+    filesEl.style.display='none';
+  }
+
+  // Position
+  const wrap=document.getElementById('cwrap');
+  const pw=380, ph=400;
+  let px=posX-wrap.scrollLeft+DW+10;
+  let py=posY-wrap.scrollTop;
+  if(px+pw>wrap.clientWidth) px=posX-wrap.scrollLeft-pw-10;
+  if(py+ph>wrap.clientHeight) py=Math.max(0,wrap.clientHeight-ph-10);
+
+  const popup=document.getElementById('agent-popup');
+  popup.style.left=px+'px';
+  popup.style.top=py+'px';
+  popup.classList.add('show');
+}
+
+function closePopup(){
+  document.getElementById('agent-popup').classList.remove('show');
+  activePopupId=null;
+}
+
+// Draggable popup
+(()=>{
+  const popup=document.getElementById('agent-popup');
+  const head=document.getElementById('pop-head');
+  let drag=false,ox=0,oy=0;
+  head.addEventListener('mousedown',e=>{drag=true;ox=e.clientX-popup.offsetLeft;oy=e.clientY-popup.offsetTop;});
+  document.addEventListener('mousemove',e=>{if(!drag)return;popup.style.left=(e.clientX-ox)+'px';popup.style.top=(e.clientY-oy)+'px';});
+  document.addEventListener('mouseup',()=>drag=false);
+})();
+
+// Canvas click
+cv.addEventListener('click',e=>{
+  const rect=cv.getBoundingClientRect();
+  const wrap=document.getElementById('cwrap');
+  const cx=e.clientX-rect.left+wrap.scrollLeft;
+  const cy=e.clientY-rect.top+wrap.scrollTop;
+  for(const p of positions){
+    if(cx>=p.x&&cx<=p.x+DW&&cy>=p.y&&cy<=p.y+DH){
+      openPopup(p.agent.id,p.x,p.y);
+      return;
+    }
+  }
+  closePopup();
+});
+
+cv.addEventListener('mousemove',e=>{
+  const rect=cv.getBoundingClientRect();
+  const wrap=document.getElementById('cwrap');
+  const cx=e.clientX-rect.left+wrap.scrollLeft;
+  const cy=e.clientY-rect.top+wrap.scrollTop;
+  let hover=false;
+  for(const p of positions){
+    if(cx>=p.x&&cx<=p.x+DW&&cy>=p.y&&cy<=p.y+DH){hover=true;break;}
+  }
+  cv.style.cursor=hover?'pointer':'default';
+});
+
+// ═══════════════════════════════════════════════
+// STAGES
+// ═══════════════════════════════════════════════
+const STAGES=[
+  {k:'generation',l:'💡 Генерация идей'},
+  {k:'dedup',l:'🔀 Дедупликация'},
+  {k:'jury',l:'⚖️ Оценка жюри'},
+  {k:'scoring',l:'🔢 Рейтинг'},
+  {k:'top20',l:'✅ Топ-20'},
+  {k:'research',l:'🔍 Исследование'},
+  {k:'cleaning',l:'🧹 Чистка'},
+  {k:'analysis',l:'📊 Аналитика'},
+  {k:'consolidation',l:'🏆 Консолидация'},
+  {k:'final',l:'📋 Финальный отчёт'},
+];
+
+function buildStages(){
+  document.getElementById('stage-list').innerHTML=
+    STAGES.map(s=>`<div class="si" id="si-${s.k}"><div class="sd"></div><span>${s.l}</span></div>`).join('');
+}
+
+// ═══════════════════════════════════════════════
+// POLLING
+// ═══════════════════════════════════════════════
+let lastFeedCount=0, currentRun=null;
+
+async function poll(){
+  try{
+    // Pipeline log (from pipeline monitor)
+    const runs=await(await fetch('/api/runs')).json();
+    if(runs.length){
+      currentRun=runs[0];
+      const logData=await(await fetch(`/api/pipeline?run=${encodeURIComponent(currentRun)}`)).json();
+      if(logData.log){
+        const lines=logData.log.split('\n').filter(l=>l.trim());
+        if(lines.length!==lastFeedCount){ updateFeed(lines); updateStages(lines); lastFeedCount=lines.length; }
+      }
+    }
+
+    // Bulk agent statuses (one request for all 55 agents!)
+    const agentData=await(await fetch('/api/agents')).json();
+    if(agentData.agents){
+      for(const [id, info] of Object.entries(agentData.agents)){
+        const s=state[id];
+        if(!s) continue;
+
+        s.status=info.status; // 'active', 'done', 'error', 'stale'
+        s.ageMinutes=info.ageMinutes||0;
+        s.log=info.lines.slice(-30).map(l=>({
+          text:l.replace(/^\[[^\]]+\]\s*/,''),
+          cls: l.includes('✅')||l.includes('DONE')?'done-line'
+              :l.includes('💡')||l.includes('Идея')?'idea'
+              :l.includes('🔧')||l.includes('Tool')?'action'
+              :l.includes('❌')||l.includes('ERROR')?'error-line'
+              :'default'
+        }));
+
+        // Add output file link
+        if(info.outputFile){
+          s.files=[{name:info.outputFile.split('/').pop(), path:info.outputFile}];
+        }
+
+        // Update open popup live
+        if(activePopupId===id){
+          const logEl=document.getElementById('pop-log');
+          if(logEl){
+            logEl.innerHTML=s.log.map(l=>`<div class="pl ${l.cls}">${l.text}</div>`).join('');
+            logEl.scrollTop=logEl.scrollHeight;
+          }
+          const statusEl=document.getElementById('pop-status');
+          if(statusEl){
+            const label=s.status==='active'?'Работает':s.status==='done'?'Готово':s.status==='error'?'Ошибка':'Отдыхает';
+            statusEl.textContent=label;
+            statusEl.className='pop-status'+(s.status==='active'?' active':s.status==='done'?' done':'');
+          }
+          // Show file link
+          const filesEl=document.getElementById('pop-files');
+          if(filesEl && s.files.length){
+            filesEl.style.display='flex';
+            filesEl.innerHTML=s.files.map(f=>`<span class="file-link" onclick="openFile('${f.path}')">📄 ${f.name}</span>`).join('');
+          }
+        }
+      }
+    }
+  }catch(e){ console.error('poll error',e); }
+}
+
+function updateFeed(lines){
+  const feed=document.getElementById('activity-feed');
+  const newLines=lines.slice(lastFeedCount);
+  newLines.forEach(line=>{
+    const div=document.createElement('div');
+    const cls=line.includes('✅')?'done':line.includes('🚀')?'start':line.includes('⚠️')?'warn':line.includes('❌')?'error':line.includes('🔄')?'action':'';
+    div.className=`fl ${cls}`;
+    const ts=(line.match(/\[(\d{2}:\d{2})/)||['','—'])[1];
+    const msg=line.replace(/^\[[^\]]+\]\s*/,'');
+    div.innerHTML=`<span class="ft">${ts}</span><span class="fm">${msg}</span>`;
+    feed.appendChild(div);
+  });
+  feed.scrollTop=feed.scrollHeight;
+
+  const dot=document.getElementById('hdot');
+  dot.className='pulse-dot live';
+  document.getElementById('header-stage').textContent=
+    lines.filter(l=>l.trim()).pop()?.replace(/^\[[^\]]+\]\s*/,'')||'';
+}
+
+function updateStages(lines){
+  const text=lines.join('\n');
+  let last=-1;
+  STAGES.forEach((s,i)=>{ if(text.includes(s.l.replace(/^[^ ]+ /,''))) last=i; });
+  STAGES.forEach((s,i)=>{
+    const el=document.getElementById(`si-${s.k}`);
+    if(!el) return;
+    el.className='si'+(i<last?' done':i===last?' active':'');
+  });
+}
+
+function openFile(path){ window.open(`/api/file?path=${encodeURIComponent(path)}`,'_blank'); }
+
+// FINAL REPORT
+async function showFinal(){
+  if(!currentRun) return;
+  const res=await fetch(`/api/file?path=${encodeURIComponent('/Users/crabe/.openclaw/workspace/research-lab/results/'+currentRun+'/03-final/executive-summary.md')}`);
+  const data=await res.json();
+  if(!data.content) return;
+  const ideas=data.content.split(/^## /m).filter(s=>s.trim()).map((s,i)=>{
+    const lines=s.trim().split('\n');
+    const title=lines[0];
+    const body=lines.slice(1).join('\n');
+    const badge=body.includes('🟢')?'g':body.includes('🔴')?'r':'y';
+    const rec=body.includes('🟢')?'🟢 Перспективно':body.includes('🔴')?'🔴 Рискованно':'🟡 Спорно';
+    return {title,body,badge,rec,i};
+  });
+  document.getElementById('final-content').innerHTML=ideas.map(idea=>`
+    <div class="idea-card">
+      <div class="idea-card-hdr" onclick="this.nextElementSibling.classList.toggle('open')">
+        <span class="idea-num">#${String(idea.i+1).padStart(2,'0')}</span>
+        <span class="idea-title">${idea.title}</span>
+        <span class="badge-${idea.badge}">${idea.rec}</span>
+      </div>
+      <div class="idea-body">${idea.body.replace(/\n/g,'<br>')}</div>
+    </div>
+  `).join('');
+  document.getElementById('final-overlay').style.display='block';
+}
+
+function exportPDF(){
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  let y=20;
+  doc.setFontSize(16);doc.text('Research Lab — Финальный отчёт',20,y);y+=8;
+  doc.setFontSize(9);doc.setTextColor(120,120,120);
+  doc.text(`${new Date().toLocaleString('ru-RU')}`,20,y);y+=10;
+  document.querySelectorAll('.idea-card').forEach((card,i)=>{
+    if(y>260){doc.addPage();y=20;}
+    doc.setFontSize(12);doc.setTextColor(20,20,20);
+    doc.text(`${i+1}. ${card.querySelector('.idea-title')?.textContent||''}`,20,y);y+=6;
+    doc.setFontSize(9);doc.setTextColor(100,100,100);
+    const body=card.querySelector('.idea-body')?.innerText||'';
+    const lines=doc.splitTextToSize(body,170);
+    doc.text(lines,20,y);y+=lines.length*4+8;
+  });
+  doc.save(`research-report-${new Date().toISOString().slice(0,10)}.pdf`);
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+buildLayout();
+buildStages();
+render();
+setInterval(poll,2000);
+poll();
+</script>
+</body>
+</html>
